@@ -22,3 +22,8 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 todo-*.tar
 
+ch07/todo/lib/db/*
+
+ch07/todo/.elixir_ls/*
+
+ch07/todo/.elixir_ls/

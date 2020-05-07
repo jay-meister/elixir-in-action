@@ -3,6 +3,7 @@ defmodule Todo.Cache do
 
   @impl true
   def init(_arg) do
+    {:ok, _pid} = DataStore.Server.start()
     {:ok, %{}}
   end
 
@@ -11,8 +12,8 @@ defmodule Todo.Cache do
     pid =
       case Map.fetch(state, name) do
         :error ->
-          log("starting new Todo.List instance")
-          {:ok, pid} = Todo.Server.start()
+          log("Todo.List instance not currently stored in cache")
+          {:ok, pid} = Todo.Server.start(name)
           pid
 
         {:ok, pid} ->

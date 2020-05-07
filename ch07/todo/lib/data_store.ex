@@ -1,6 +1,10 @@
 defmodule DataStore do
   @db "db"
 
+  def path() do
+    "#{__DIR__}/#{@db}"
+  end
+
   def path(id) do
     "#{__DIR__}/#{@db}/#{id}"
   end
@@ -10,10 +14,11 @@ defmodule DataStore do
     |> File.write!(:erlang.term_to_binary(data))
   end
 
-  def read!(id) do
-    path(id)
-    |> File.read!()
-    |> :erlang.binary_to_term()
+  def read(id) do
+    case path(id) |> File.read() do
+      {:ok, contents} -> :erlang.binary_to_term(contents)
+      _ -> nil
+    end
   end
 end
 
@@ -24,23 +29,23 @@ defmodule DataStore.Server do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
 
-  def write(id, data) do
+  def store(id, data) do
     :ok = GenServer.cast(__MODULE__, {:write, id, data})
   end
 
-  def read(id) do
-    data = GenServer.call(__MODULE__, {:read, id})
-    {:ok, data}
+  def get(id) do
+    _data = GenServer.call(__MODULE__, {:read, id})
   end
 
   @impl true
   def init(_) do
+    File.mkdir_p!(DataStore.path())
     {:ok, nil}
   end
 
   @impl true
   def handle_call({:read, id}, _from, state) do
-    {:reply, DataStore.read!(id), state}
+    {:reply, DataStore.read(id), state}
   end
 
   @impl true
