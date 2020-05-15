@@ -9,7 +9,7 @@ defmodule Todo.CacheTest do
 
     on_exit(fn ->
       Database.Server.purge_db()
-      Database.Server.stop()
+      GenServer.stop(Database.Server)
     end)
 
     %{cache: pid}
