@@ -2,10 +2,10 @@ defmodule TodoCacheTest do
   use ExUnit.Case
 
   test "server_process" do
-    bob_pid = Todo.Cache.server_process("bob")
+    jane_pid = Todo.Cache.server_process("jane")
 
-    assert bob_pid != Todo.Cache.server_process("alice")
-    assert bob_pid == Todo.Cache.server_process("bob")
+    assert jane_pid != Todo.Cache.server_process("alice")
+    assert jane_pid == Todo.Cache.server_process("jane")
   end
 
   test "to-do operations" do
@@ -17,14 +17,14 @@ defmodule TodoCacheTest do
   end
 
   test "persistence", context do
-    john = Todo.Cache.server_process("john")
-    Todo.Server.add_entry(john, %{date: ~D[2018-12-20], title: "Shopping"})
-    assert 1 == length(Todo.Server.entries(john, ~D[2018-12-20]))
+    jane = Todo.Cache.server_process("jane")
+    Todo.Server.add_entry(jane, %{date: ~D[2018-12-20], title: "Shopping"})
+    assert 1 == length(Todo.Server.entries(jane, ~D[2018-12-20]))
 
-    Process.exit(john, :kill)
+    Process.exit(jane, :kill)
 
     entries =
-      "john"
+      "jane"
       |> Todo.Cache.server_process()
       |> Todo.Server.entries(~D[2018-12-20])
 

@@ -36,7 +36,7 @@ defmodule Todo.Database.Worker do
   end
 
   def store(pid, id, data) do
-    GenServer.call(pid, {:store, id, data})
+    GenServer.cast(pid, {:store, id, data})
   end
 
   # internal callback functions
@@ -51,7 +51,7 @@ defmodule Todo.Database.Worker do
   end
 
   @impl true
-  def handle_call({:store, id, data}, _from, db_path) do
+  def handle_cast({:store, id, data}, db_path) do
     :ok = Operations.store(db_path, id, data)
     {:noreply, db_path}
   end
@@ -65,9 +65,7 @@ defmodule Todo.Database do
       Application.fetch_env!(:todo, :database)
       |> Keyword.fetch!(:path)
 
-    [node_name, _host] = "#{node()}" |> String.split("@")
-
-    Path.join([File.cwd!(), path, node_name])
+    Path.join(File.cwd!(), path)
   end
 
   def purge_db do
@@ -98,23 +96,6 @@ defmodule Todo.Database do
   end
 
   def store(id, data) do
-    {_results, bad_nodes} =
-      :rpc.multicall(
-        __MODULE__,
-        :store_local,
-        [id, data],
-        :timer.seconds(5)
-      )
-      |> IO.inspect()
-
-    Enum.each(bad_nodes, fn node -> IO.puts("Store failed on node #{node}") end)
-
-    :ok
-  end
-
-  def store_local(id, data) do
-    IO.puts("store_local called in #{inspect(node())}")
-
     choose_worker(fn pid ->
       Database.Worker.store(pid, id, data)
     end)

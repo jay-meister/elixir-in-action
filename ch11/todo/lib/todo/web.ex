@@ -1,6 +1,8 @@
 defmodule Todo.Web do
   use Plug.Router
 
+  # import Plug.Conn
+
   plug(:match)
 
   plug(:dispatch)
@@ -19,7 +21,7 @@ defmodule Todo.Web do
   end
 
   post "/add_entry" do
-    # IO.inspect(conn)
+    IO.inspect(conn)
     conn = Plug.Conn.fetch_query_params(conn)
     list_name = Map.fetch!(conn.params, "list")
     title = Map.fetch!(conn.params, "title")
@@ -35,7 +37,7 @@ defmodule Todo.Web do
   end
 
   get "/entries" do
-    # IO.inspect(conn)
+    IO.inspect(conn)
     conn = Plug.Conn.fetch_query_params(conn)
     list_name = Map.fetch!(conn.params, "list")
     date = Map.fetch!(conn.params, "date") |> Date.from_iso8601!()

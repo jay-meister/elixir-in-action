@@ -12,13 +12,11 @@ defmodule Todo.Server do
 
   use GenServer, restart: :temporary
 
-  @expire_after :timer.minutes(10)
-
   # client functions called in client process which
   # send messages to one of many Todo.Server processes
 
   def start_link(name) do
-    GenServer.start_link(__MODULE__, name, name: global_name(name))
+    GenServer.start_link(__MODULE__, name, name: via_tuple(name))
   end
 
   def add_entry(pid, entry) do
@@ -29,15 +27,8 @@ defmodule Todo.Server do
     GenServer.call(pid, {:entries, date})
   end
 
-  defp global_name(name) do
-    {:global, {__MODULE__, name}}
-  end
-
-  def whereis(name) do
-    case :global.whereis_name({__MODULE__, name}) do
-      :undefined -> nil
-      pid -> pid
-    end
+  defp via_tuple(name) do
+    Todo.ProcessRegistry.via_tuple({__MODULE__, name})
   end
 
   # internal callback functions are run on seperate processes
@@ -46,8 +37,7 @@ defmodule Todo.Server do
 
   @impl true
   def init(name) do
-    IO.puts("starting todo server #{name} on node #{node()}")
-    {:ok, {name, Todo.Database.get(name) || Todo.List.new()}, @expire_after}
+    {:ok, {name, Todo.Database.get(name) || Todo.List.new()}}
   end
 
   @impl true
@@ -55,17 +45,11 @@ defmodule Todo.Server do
     list = Todo.List.add_entry(list, entry)
     Todo.Database.store(name, list)
 
-    {:noreply, {name, list}, @expire_after}
+    {:noreply, {name, list}}
   end
 
   @impl true
   def handle_call({:entries, date}, _from, {name, list}) do
-    {:reply, Todo.List.entries(list, date), {name, list}, @expire_after}
-  end
-
-  @impl true
-  def handle_info(:timeout, {name, list}) do
-    IO.puts("killing todo server #{name} due to timeout")
-    {:stop, :normal, {name, list}}
+    {:reply, Todo.List.entries(list, date), {name, list}}
   end
 end

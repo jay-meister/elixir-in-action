@@ -12,13 +12,13 @@ defmodule Todo.Server do
 
   use GenServer, restart: :temporary
 
-  @expire_after :timer.minutes(10)
+  @expire_after :timer.seconds(10)
 
   # client functions called in client process which
   # send messages to one of many Todo.Server processes
 
   def start_link(name) do
-    GenServer.start_link(__MODULE__, name, name: global_name(name))
+    GenServer.start_link(__MODULE__, name, name: via_tuple(name))
   end
 
   def add_entry(pid, entry) do
@@ -29,15 +29,8 @@ defmodule Todo.Server do
     GenServer.call(pid, {:entries, date})
   end
 
-  defp global_name(name) do
-    {:global, {__MODULE__, name}}
-  end
-
-  def whereis(name) do
-    case :global.whereis_name({__MODULE__, name}) do
-      :undefined -> nil
-      pid -> pid
-    end
+  defp via_tuple(name) do
+    Todo.ProcessRegistry.via_tuple({__MODULE__, name})
   end
 
   # internal callback functions are run on seperate processes
@@ -46,7 +39,6 @@ defmodule Todo.Server do
 
   @impl true
   def init(name) do
-    IO.puts("starting todo server #{name} on node #{node()}")
     {:ok, {name, Todo.Database.get(name) || Todo.List.new()}, @expire_after}
   end
 
