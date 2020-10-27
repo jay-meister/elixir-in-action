@@ -546,3 +546,70 @@ iex> System.stop() # stop todo system from remote shell
 
 ##### Running scripts
 - `elixir file_name.exs` - execute script, all modules compiled in memory
+- `mix run -e MyTool.Runner.run` - starts OTP app & runs a function within mix project
+- `mix escript.build` build an "escript" which creates a CLI script, only erlang needed on host machine
+
+##### Running in prod
+- `MIX_ENV=prod elixir -S mix run --no-halt`
+- When measuring load/speed performance, always compile in PROD for real-life results
+
+### OTP Releases
+- standalone compiled runnable system
+- can include erlang binaries making it self-sufficient
+- doesn't contain artefacts such as docs, tests, source code
+- can build system on dev machine and ship only binary artefacts
+
+##### Distillary
+- `mix release.init` initialise `rel/` directory
+- `MIX_ENV=prod mix release` - build new release
+- `def project, do: [preferred_cli_env: [release: :prod]]` - set default release env in mix.exs
+- `_build/prod/rel/todo` - can now run on another machine with same architecture/os
+- `build/prod/rel/todo/bin/todo` list possible commands
+- `_build/prod/rel/todo/bin/todo start_iex` - start system with iex shell
+- `_build/prod/rel/todo/bin/todo remote` - connects to running system via remote shell
+- `_build/prod/rel/todo/bin/todo daemon` - starts in background
+- `_build/prod/rel/todo/bin/todo stop` - stops system 
+
+##### Release contents
+- `_build/prod/rel/todo/lib` contains runtime dependencies (all otp applications)
+- In each is `ebin` subfolder containing compiled binaries
+- `Application.app_dir(:an_app_name, "priv")` for `/priv` absolute path which is automatically added to application folder in release
+- `_build/prod/rel/todo/releases/0.1.0/vm.args` - flags passed to erlang runtime
+- `_build/prod/rel/todo/releases/0.1.0/sys.config` - contains OTP env vars from `mix.exs` & `config.exs`
+- `_build/prod/rel/todo/releases/0.1.0` - contains compressed tarbell named `todo.tar.gz` which is compressed version of the entire release (I can't find this, maybe moved). To deploy to a target meachine, copy this file, unpack it, start system with `bin/todo start`.
+
+
+### Analysing system behaviour
+- `:timer.tc` - time a function
+- Benchfella / Benchee - benchmarking tools
+- `mix profile.cprof` / `eprof` / `fprof` profiling tools
+
+##### Observe remote node with `:observer`:
+- add `:runtime_tools` to `extra_applications` in `mix.exs`
+- connect to running release: `iex --hidden --name observer@127.0.0.1 --cookie todo`
+- run `:observer.start()`, then, click Nodes and select the remote node 
+- see `wobserver` for http observer-like tool
+
+##### Tracing
+```elixir
+# start tracing genserver
+:sys.trace(Todo.Cache.server_process("bob"), true)
+# starting todo server bob on node todo@Jacks-MacBook-Pro-3
+# :ok
+# *DBG* {'Elixir.Todo.Server',<<"bob">>} 
+# got call { entries, #{'__struct__' => 'Elixir.Date', calendar => 'Elixir.Calendar.ISO', day => 20,month => 12, year => 2018}} 
+# from <0.1106.0> 
+#
+# *DBG* {'Elixir.Todo.Server',<<"bob">>} 
+# sent [] to <0.1106.0>, 
+# new state {<<"bob">>, #{'__struct__' => 'Elixir.Todo.List', auto_id => 1, entries => #{}}}
+
+# stop tracing genserver
+:sys.trace(Todo.Cache.server_process("bob"), false)
+```
+Tracing will be expensive if large state or traced process is under heavy load
+
+- `:sys.get_state/1` & `:sys.replace_state/2` allow us to read & update OTP processes state (meant for debugging purposes)
+- `:erlang.trace/3` function allows us to subscribe to events in system such as message-passing or function calls
+- `:dbg` module simplifies tracing - example in book I couldn't get to work due to host name of running server
+- see package `recon` for analyzing a running BEAM node
